@@ -1,24 +1,14 @@
-   '''
-   Copyright 2017 Esri
+'''
+Copyright 2017 Esri
 
-   Licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 
-   you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-   You may obtain a copy of the License at
+   http://www.apache.org/licenses/LICENSE-2.0
 
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-
-   distributed under the License is distributed on an "AS IS" BASIS,
-
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-
-   See the License for the specific language governing permissions and
-
-   limitations under the License.​
-   '''
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.​
+'''
 
 import arcpy
 import requests
@@ -77,11 +67,14 @@ class Geoenrichment(object):
         # log request into Geoprocessing Messages
         arcpy.AddMessage(self.get_request_as_string(create_report_url, data))
         
-        if response.status_code == 200:
-            # write results into PDF file
+        # there are cases when you get 200 status code and "error" json in the body
+        # this can be addressed by checking the content-type
+        if  response.status_code == 200 and response.headers["content-type"] == "application/pdf;charset=UTF-8":
             with open(pdf, 'wb') as f:
                 for chunk in response.iter_content(1024):
                     f.write(chunk)
+        else:
+            arcpy.AddError("Server response: " + response.text)
 
     ''' Displays a Windows message box - for debugging purposes only'''  
     def Mbox(self, title, text, style):
@@ -94,5 +87,5 @@ class Geoenrichment(object):
 
     ''' Returns request in "requests" format (url + data) in "browser" format (endpoint url and parameters in a single url)'''
     def get_request_as_string(self, query_url, data):
-        get_request_data = [k + "=" + str(v) for k, v in data.items()]
+        get_request_data = [k + "=" + requests.utils.quote(str(v)) for k, v in data.items()]
         return query_url + "?" + functools.reduce(lambda a,b:a + "&" + b, get_request_data)
