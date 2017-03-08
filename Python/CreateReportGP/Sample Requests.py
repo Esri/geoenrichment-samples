@@ -51,6 +51,16 @@ def get_request_as_string(query_url, data):
 
 get_request_as_string(bg_reports_url, data)
 		
-		
+**************************************
 
+
+search_data = {"f":"json", 
+    "token":token, 
+    "q":'type:"Report Template" AND typekeywords:esriWebReport',
+    "num":100,
+    "sortOrder":"asc",
+    "sortField":"title",
+    "start":1
+    }
+response = requests.post(portal + "/sharing/rest/search", search_data)
 
