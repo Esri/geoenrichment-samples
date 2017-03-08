@@ -1,0 +1,272 @@
+﻿<!--
+Copyright 2017 Esri
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+   http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
+and limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no" />
+    <title>Enrich Sample</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/3.20/esri/css/esri.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.20/esri/css/calcite/calcite.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: calc(100% - 100px);
+        }
+
+        .dijitPopup.Popup {
+            height: 480px !important;
+            width: 720px;
+            background-color: white;
+        }
+
+        #legendWrapper {
+            padding: 20px 0 0 0;
+            position: absolute;
+            z-index: 10000;
+            right: 20px;
+            bottom: 140px;
+            background-color: white;
+        }
+
+        .esri .dijitPlaceHolder {
+            color: #AAAAAA;
+            font-style: italic;
+            left: 0.3em;
+            position: absolute;
+            top: 0px;
+        }
+    </style>
+    <script src="https://js.arcgis.com/3.20/"></script>
+    <script>
+        var map, toolbar, layer, legend;
+
+        var HORIZONTAL_SQUARES = 10,
+            VERTICAL_SQUARES = 10,
+            AnalysisVariable = "KeyGlobalFacts.TOTPOP";
+
+        require([
+            "dojo/on",
+            "dojo/dom-construct",
+            "dijit/popup",
+            "esri/dijit/PopupTemplate",
+            "esri/map",
+            "esri/geometry/Polygon",
+            "esri/layers/FeatureLayer",
+            "esri/dijit/Legend",
+            "esri/renderers/smartMapping",
+            "esri/request",
+            "esri/toolbars/draw",
+            "esri/dijit/geoenrichment/DataBrowser",
+            "dojo/domReady!"
+        ], function (
+            on,
+            domConstruct,
+            popup,
+            PopupTemplate,
+            Map,
+            Polygon,
+            FeatureLayer,
+            Legend,
+            smartMapping,
+            esriRequest,
+            Draw,
+            DataBrowser
+            ) {
+
+            on(dojo.byId("launchDataBrowser"), "click", launchDataBrowser);
+
+            function launchDataBrowser() {
+                var dataBrowser = new DataBrowser({
+                    countryID: "US",
+                    okButton: "Yes",
+                    backButton: "Back",
+                    cancelButton: "No",
+                    selectionLimit: 1,
+                    onOK: function () {
+                        if (dataBrowser.get("selection").length > 0) {
+                            AnalysisVariable = dataBrowser.get("selection")[0];
+                            dojo.byId("selectedVariable").innerHTML = "Selected Variable: " + dataBrowser.variables._query(dataBrowser.variables._data, { "fullName": AnalysisVariable })[0].alias;
+
+                            popup.close(dataBrowser);
+                        }
+                    },
+                    onBack: function() {
+                        popup.close(dataBrowser);
+                    }
+                });
+
+                popup.open({
+                    popup: dataBrowser,
+                    x: 150,
+                    y: 150,
+                    onClose: function () {
+                    }
+                });
+
+                dataBrowser.startup();
+            }
+
+            map = new Map("map", {
+                basemap: "gray",  //For full list of pre-defined basemaps, navigate to http://arcg.is/1JVo6Wd
+                center: [-122.45, 37.75], // longitude, latitude
+                zoom: 13
+            });
+
+            on(dojo.byId("drawRectangleButton"), "click", createToolbar)
+
+            function createToolbar() {
+                toolbar = new Draw(map);
+                toolbar.on("draw-end", addToMap);
+                toolbar.activate(Draw.RECTANGLE);
+            }
+
+            function addToMap(evt) {
+                toolbar.deactivate();
+
+                if (layer)
+                    map.removeLayer(layer);
+
+                // Create a HORIZONTAL_SQUARES x VERTICAL_SQUARES grid
+                var gridPolygons = [],
+                    firstPoint = evt.geometry.rings[0][0],
+                    xLength = evt.geometry.rings[0][0][0] - evt.geometry.rings[0][1][0],
+                    yLength = evt.geometry.rings[0][0][1] - evt.geometry.rings[0][3][1],
+                    xGridLength = Math.abs(xLength / (HORIZONTAL_SQUARES)),
+                    yGridLength = Math.abs(yLength / (VERTICAL_SQUARES));
+
+                for (var i = 0; i < VERTICAL_SQUARES; i++) {
+                    for (var j = 0; j < HORIZONTAL_SQUARES; j++) {
+                        var point1 = [firstPoint[0] + (j * xGridLength), firstPoint[1] - (i * yGridLength)],
+                            point2 = [firstPoint[0] + ((j + 1) * xGridLength), firstPoint[1] - (i * yGridLength)],
+                            point3 = [firstPoint[0] + ((j + 1) * xGridLength), firstPoint[1] - ((i + 1) * yGridLength)],
+                            point4 = [firstPoint[0] + (j * xGridLength), firstPoint[1] - ((i + 1) * yGridLength)],
+                            polygon = new Polygon(evt.geometry.spatialReference);
+
+                        gridPolygons.push(polygon);
+                        polygon.addRing([point1, point2, point3, point4, point1]);
+                    }
+                }
+
+                var studyAreasJson = gridPolygons.map(function (polygon) { return { "geometry": polygon.toJson() } });
+
+                var enrichRequestJson = {
+                    studyAreas: [JSON.stringify(studyAreasJson)],
+                    analysisVariables: [AnalysisVariable],
+                    returnGeometry: true,
+                    outSR: evt.geometry.spatialReference.wkid,
+                    f: "json"
+                };
+
+                esriRequest({
+                    url: "https://geoenrich.arcgis.com/arcgis/rest/services/World/geoenrichmentserver/Geoenrichment/Enrich",
+                    content: enrichRequestJson,
+                    handleAs: "json"
+                }).then(function (response) {
+
+                    var fs = response.results[0].value.FeatureSet[0];
+
+                    if (fs.features.length > 0) {
+
+                        // Need to add the spatial reference to the returned polygons
+                        var polygonFeatures = [];
+                        fs.features.forEach(function (feature) {
+                            var polygon = new Polygon(evt.geometry.spatialReference);
+                            polygon.addRing(feature.geometry.rings[0]);
+                            feature.geometry = polygon;
+                        });
+
+                        var fieldName = fs.fields[5].name;
+
+                        //define a popup template
+                        var popupTemplate = new PopupTemplate({
+                            fieldInfos: [
+                                { fieldName: fs.fields[5].name, label: fs.fields[5].alias, visible: true }
+                            ]
+                        });
+
+                        layer = new FeatureLayer({
+                            layerDefinition: {
+                                geometryType: fs.geometryType,
+                                fields: fs.fields,
+                                spatialReference: { wkid: evt.geometry.spatialReference.wkid }
+                            },
+                            featureSet: {
+                                features: fs.features,
+                                geometryType: fs.geometryType
+                            }
+                        },
+                        {
+                            infoTemplate: popupTemplate
+                        });
+
+                        //smart mapping functionality begins
+                        map.addLayer(layer);
+
+                        smartMapping.createClassedColorRenderer({
+                            layer: layer,
+                            field: AnalysisVariable.split(".")[1],
+                            basemap: map.getBasemap(),
+                            classificationMethod: "quantile"
+                        }).then(function (response) {
+                            layer.setRenderer(response.renderer);
+                            layer.setOpacity(0.8);
+                            layer.redraw();
+                            createLegend(map, layer, AnalysisVariable.split(".")[1]);
+                        });
+                    }
+
+                },
+                    function (error) {
+                        alert("Error: " + error);
+                    });
+            }
+
+            //Create a legend
+            function createLegend(map, layer, field) {
+                //If applicable, destroy previous legend
+                if (legend) {
+                    legend.destroy();
+                    domConstruct.destroy(dojo.byId("legendDiv"));
+                }
+
+                // create a new div for the legend
+                var legendDiv = domConstruct.create("div", {
+                    id: "legendDiv"
+                }, dojo.byId("legendWrapper"));
+
+                legend = new Legend({
+                    map: map,
+                    layerInfos: [{
+                        layer: layer
+                    }]
+                }, legendDiv);
+                legend.startup();
+            }
+
+        });
+    </script>
+</head>
+
+<body class="esri calcite">
+    <div style="height: 1%; min-height: 100px">
+        <div style="padding: 10px;" id="selectedVariable">Selected Variable: 2016 Total Population</div>
+        <input style="margin: 10px;" type="button" id="drawRectangleButton" value="Draw Rectangle" />
+        <input type="button" id="launchDataBrowser" value="Launch Data Browser" />
+    </div>
+    <div id="map"></div>
+    <div id="legendWrapper"></div>
+</body>
+</html>
