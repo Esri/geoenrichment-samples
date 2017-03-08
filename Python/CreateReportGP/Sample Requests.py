@@ -49,7 +49,7 @@ def get_request_as_string(query_url, data):
 	get_request_data = [k + "=" + str(v) for k, v in data.items()]
 	return query_url + "?" + functools.reduce(lambda a,b:a + "&" + b, get_request_data)
 
-get_request_as_string(bg_reports_url, data)
+get_request_as_string(ge_url + "/Geoenrichment/Reports/BG", data)
 		
 #**************************************
 # Custom Reports samples
