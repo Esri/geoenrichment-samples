@@ -1,7 +1,7 @@
 # Geoenrichment Samples
 This repository is used to share the code samples using Esri Geoenrichment Service. Samples are grouped by language (e.g. Python and JavaScript).
 
-You can find the complete documentation for Geoenrichment service at http://geoenrich.arcgis.com.
+You can find the complete documentation for Geoenrichment service at https://developers.arcgis.com/features/geo-enrichment/.
 
 
 ### Licensing
