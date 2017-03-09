@@ -3,7 +3,7 @@ This repository is used to share the code samples using Esri GeoEnrichment Servi
 
 You can find the complete documentation for GeoEnrichment service at https://developers.arcgis.com/features/geo-enrichment/.
 
-## About the Geoenrichment Service
+## About the GeoEnrichment Service
 The GeoEnrichment service is a hosted ArcGIS Online utility service that provides the ability to get facts about a location or area. Using GeoEnrichment, you can get information about the people, places, and businesses in a specific area or within a certain distance or drive time from a location. More specifically, by submitting a point or polygon to the GeoEnrichment service, you can retrieve the demographics and other relevant characteristics associated with the surrounding area. You can also use GeoEnrichment to obtain additional geographic context (for example, the ZIP Code of a location) and geographic boundaries (for example, the geometry for a drive-time service area). 
 
 Detailed REST documentation can be found here:
