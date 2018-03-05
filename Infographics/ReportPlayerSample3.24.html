@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>Report Player Sample JS API 3.24</title>
+
+    <link rel="stylesheet" href="https://jsdev.arcgis.com/3.24/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="https://jsdev.arcgis.com/3.24/esri/css/esri.css">
+
+    <script src="https://jsdev.arcgis.com/3.24/"></script>
+
+    <script>
+    </script>
+
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-size: 13px;
+            font-family: "Avenir Next";
+        }
+    </style>
+
+    <script>
+
+        require([
+            "dojo/when",
+
+            "esri/IdentityManager",
+            "esri/arcgis/OAuthInfo",
+
+            "esri/dijit/geoenrichment/ReportPlayer/ReportPlayer",
+            "esri/dijit/geoenrichment/ReportPlayer/PlayerResizeModes",
+            "esri/dijit/geoenrichment/ReportPlayer/PlayerThemes",
+            "esri/dijit/geoenrichment/ReportPlayer/DataProviderGE",
+            "esri/dijit/geoenrichment/ReportPlayer/PlayerCommands",
+
+            "dojo/domReady!"
+        ],
+            function (
+                when,
+
+                esriId,
+                ArcGISOAuthInfo,
+
+                ReportPlayer,
+                PlayerResizeModes,
+                PlayerThemes,
+                DataProviderGE,
+                PlayerCommands
+            ) {
+
+                var PORTAL_URL = "https://www.arcgis.com";
+
+                var analysisJson = [{
+                    "name": "Area name",
+                    "shortName": "Area name (short)",
+                    "description": "Area description",
+                    "address": "Area address",
+                    "latitude": "Area Lat.",
+                    "longitude": "Area Long.",
+                    "feature": {
+                        "geometry": {
+                            "rings": [
+                                [
+                                    [-11864339.7841396, 4180812.00308585],
+                                    [-11865429.0117926, 4174601.49453769],
+                                    [-11874544.1274156, 4175576.06664833],
+                                    [-11873875.3034181, 4181136.86045607],
+                                    [-11864339.7841396, 4180812.00308585]
+                                ]
+                            ],
+                            "spatialReference": {
+                                "wkid": 102100
+                            }
+                        },
+                        "attributes": {
+                            "ATTR_1": 1000.12345,
+                            "ATTR_2": 2000.12345,
+                            "ATTR_3": 3000.12345
+                        },
+                        "symbol": {
+                            "color": [
+                                255 * Math.random(),
+                                255 * Math.random(),
+                                255 * Math.random(),
+                                50
+                            ],
+                            "outline": {
+                                "color": [
+                                    255 * Math.random(),
+                                    255 * Math.random(),
+                                    255 * Math.random(),
+                                    255
+                                ],
+                                "width": 1.5,
+                                "type": "esriSLS",
+                                "style": "esriSLSSolid"
+                            },
+                            "type": "esriSFS",
+                            "style": "esriSFSSolid"
+                        },
+
+                        // emulate attributes
+
+                        "infoTemplate": {
+                            "fieldInfos": [
+                                {
+                                    "fieldName": "ATTR_1",
+                                    "label": "Attribute 1",
+                                    "format": { places: 1 },
+                                    "visible": true
+                                },
+                                {
+                                    "fieldName": "ATTR_2",
+                                    "label": "Attribute 2",
+                                    "format": { places: 2 },
+                                    "visible": true
+                                },
+                                {
+                                    "fieldName": "ATTR_3",
+                                    "label": "Attribute 3",
+                                    "format": { places: 3 },
+                                    "visible": true
+                                }
+                            ]
+                        }
+                    }
+                }];
+
+                //--------------------------------------------------------------------------
+                //
+                //  Methods: run player
+                //
+                //--------------------------------------------------------------------------
+
+                var runReport = function () {
+
+                    var dataProvider = new DataProviderGE();
+                    dataProvider.registerCommand(PlayerCommands.PDF);
+                    dataProvider.registerCommand(PlayerCommands.IMAGE);
+                    dataProvider.registerCommand(PlayerCommands.PRINT);
+
+                    var player = new ReportPlayer({
+                        isSlidesView: false,
+                        theme: PlayerThemes.DARK,
+                        dataProvider: dataProvider,
+                        resizeMode: PlayerResizeModes.FIT_WINDOW
+                    }).placeAt(playerDiv);
+
+                    /* List of Esri Infographic Reports available in the US
+                      at-risk-population-US
+                      executive-summary-call-outs-US
+                      demographic-summary-US
+                      transportation-to-work-US
+                      health-care-US
+                      marketing-profile-US
+                      portrait-property-flyer-US
+                      skyscraper-US
+                      key-facts-US
+                    */
+
+                    var params = {
+                        portalUrl: PORTAL_URL,
+                        countryID: "US",
+                        reportID: "demographic-summary-US",
+                        analysisAreas: analysisJson
+                    };
+
+                    player.playReport(params);
+                }
+
+                // Authentication
+                var info = new ArcGISOAuthInfo({
+                    portalUrl: PORTAL_URL,
+                    appId: "g5vpmnaAyj9UmLKJ",
+                    popup: false
+                });
+
+                esriId.registerOAuthInfos([info]);
+                esriId.checkSignInStatus(PORTAL_URL).then(runReport).otherwise(
+                    function () {
+                        // user will be shown the OAuth Sign In page
+                        esriId.getCredential(info.portalUrl, {
+                            oAuthPopupConfirmation: false
+                        }).then(runReport);
+                    });
+            });
+    </script>
+</head>
+
+<body class="claro">
+    <div id="playerDiv"></div>
+</body>
+
+</html>
