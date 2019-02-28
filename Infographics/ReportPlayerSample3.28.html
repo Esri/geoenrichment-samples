@@ -1,0 +1,189 @@
+﻿<!--
+Copyright 2019 Esri
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+   http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
+and limitations under the License.
+-->
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>Report Player Sample JS API 3.28</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/3.28/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.28/esri/css/esri.css">
+
+    <script src="https://js.arcgis.com/3.28/"></script>
+
+    <script>
+    </script>
+
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-size: 13px;
+            font-family: "Avenir Next";
+        }
+    </style>
+
+    <script>
+
+        require([
+            "dojo/when",
+
+            "esri/urlUtils",
+
+            "esri/dijit/geoenrichment/ReportPlayer/ReportPlayer",
+            "esri/dijit/geoenrichment/ReportPlayer/PlayerResizeModes",
+            "esri/dijit/geoenrichment/ReportPlayer/PlayerThemes",
+            "esri/dijit/geoenrichment/ReportPlayer/DataProviderGE",
+            "esri/dijit/geoenrichment/ReportPlayer/PlayerCommands",
+
+            "dojo/domReady!"
+        ],
+            function (
+                when,
+
+                urlUtils,
+
+                ReportPlayer,
+                PlayerResizeModes,
+                PlayerThemes,
+                DataProviderGE,
+                PlayerCommands
+            ) {
+
+                // All requests to geoenrich.arcgis.com, arcgis.com will proxy to the proxyUrl defined in this object.
+                // See https://github.com/Esri/resource-proxy for details about configuring a proxy
+                urlUtils.addProxyRule({
+                    urlPrefix: "geoenrich.arcgis.com",
+                    proxyUrl: "/proxy/proxy.ashx"
+                });
+
+                urlUtils.addProxyRule({
+                    urlPrefix: "www.arcgis.com",
+                    proxyUrl: "/proxy/proxy.ashx"
+                });
+                
+                var PORTAL_URL = "https://www.arcgis.com";
+
+
+                var analysisJson = [{
+                    // These values are passed through and can be displayed in the Infographic template
+                    "name": "Palm Springs Convention Center",
+                    "shortName": "Palm Springs Convention Center",
+                    "description": "The Palm Springs Convention Center is a 245,000 sq ft convention center located in downtown Palm Springs, California. Architect William Pereira designed the original building in 1974. In 2005, the Convention Center completed a massive expansion, adding over 100,000 sq ft.",
+                    "address": "277 N Avenida Caballeros, Palm Springs, CA 92262",
+                    "latitude": "33.8258",
+                    "longitude": "-116.5381",
+
+                    // Specifies the point/area of the Infographic and generates a 5 mile ring buffer around our point
+                    "buffer": {
+                        point: {"x": -116.5381, "y": 33.8258, "spatialReference": {"wkid": 4326 }},
+                        units: "esriMiles",
+                        radius: 5,
+                        attributes: { /* Optional */
+                            "ATTR_1": 1000.12345,
+                            "ATTR_2": 2000.12345,
+                            "ATTR_3": 3000.12345
+                        }
+                    }
+                }];
+
+
+
+                //--------------------------------------------------------------------------
+                //
+                //  Methods: run player
+                //
+                //--------------------------------------------------------------------------
+
+                var runReport = function () {
+
+                    // Specify which export options are available for the Infographic in the ReportPlayer
+                    var dataProvider = new DataProviderGE();
+                    dataProvider.registerCommand(PlayerCommands.PDF);
+                    dataProvider.registerCommand(PlayerCommands.IMAGE);
+                    dataProvider.registerCommand(PlayerCommands.DYNAMIC_HTML);
+                    dataProvider.registerCommand(PlayerCommands.PRINT);
+
+                    var player = new ReportPlayer({
+                        isSlidesView: false,
+                        theme: PlayerThemes.DARK,
+                        dataProvider: dataProvider,
+                        resizeMode: PlayerResizeModes.FIT_WINDOW,
+                        config: {
+                            esriDijitCssUrl: "https://js.arcgis.com/3.28/dijit/themes/claro/claro.css",
+                            esriCssUrl: "https://js.arcgis.com/3.28/esri/css/esri.css",
+                            playerSourceRootUrl: "https://js.arcgis.com/3.28/" 
+                        }
+                    }).placeAt(playerDiv);
+
+                    /* Esri Provided Infographics for 3.28
+                        at-risk-population
+                        executive-summary-call-outs
+                        demographic-summary
+                        transportation-to-work
+                        health-care
+                        marketing-profile
+                        portrait-property-flyer
+                        skyscraper
+                        tapestry-profile
+                        nearby-restaurants
+                        key-facts (US, Canada and MBR countries)
+                        multi-area-comparison (US, Canada and MBR countries)
+                        property-details
+                        employment-overview
+                        office-market-profile
+                        health-care-and-insurance
+                        demographic-profile
+                        commute-profile
+                        target-market-summary
+                    */
+
+                    var params = {
+                        portalUrl: PORTAL_URL,
+                        countryID: "US",
+                        reportID: "employment-overview",
+                        analysisAreas: analysisJson
+                    };
+
+                    player.playReport(params);
+
+                    // Uncomment out to automatically download Image/PDF/Dynamic HTML
+                    /*
+                    when(player.playReport(params, { waitUntilAllContentIsReady: true }), function () {
+
+                        // Automatically download an image or PDF of the generated infographic report
+                        when(player.executeCommand(PlayerCommands.IMAGE, {
+                            skipSavingFile: true // true - Array of image files { base64Data: data, name: String, data: Blob } will be returned, false - files will be downloaded
+                        }), function (imageFiles) {
+                            alert(imageFiles);
+                            // work with image files
+                        });
+
+                    });
+                    */
+                    
+                }
+
+                runReport();
+            });
+
+    </script>
+</head>
+
+<body class="claro">
+    <div id="playerDiv"></div>
+</body>
+
+</html>
