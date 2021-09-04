@@ -1,0 +1,14 @@
+name: generate-infographic
+
+channels:
+  - esri
+  - conda-forge
+
+dependencies:
+  - arcgis
+  - jupyterlab
+  - nodejs
+  - pip
+  - pandas
+  - python-dotenv
+  - requests
