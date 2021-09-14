@@ -1,0 +1,13 @@
+name: geoenrichment
+
+channels:
+  - esri
+  - conda-forge
+
+dependencies:
+  - arcgis
+  - jupyterlab
+  - nodejs
+  - pip
+  - python=3.7
+  - python-dotenv
